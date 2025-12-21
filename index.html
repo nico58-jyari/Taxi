@@ -3,376 +3,351 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAXI日報 決定版</title>
+    <title>TAXI日報 Ultimate</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: sans-serif; background-color: #f8fafc; padding-bottom: 20px; }
-        .btn-main { width: 100%; padding: 16px; font-size: 1.2rem; font-weight: bold; border-radius: 12px; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        body { font-family: sans-serif; background-color: #f8fafc; padding-bottom: 80px; }
+        .btn-main { width: 100%; padding: 18px; font-size: 1.25rem; font-weight: bold; border-radius: 16px; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .btn-main:active { transform: translateY(2px); box-shadow: none; }
-        .card { background: white; padding: 1.25rem; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+        .card { background: white; padding: 1.25rem; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
         
         /* ステータスボード */
         .status-container { display: flex; background: #1e293b; color: white; border-radius: 16px; overflow: hidden; margin-bottom: 1rem; }
-        .status-item { flex-direction: column; display: flex; justify-content: center; align-items: center; padding: 12px 4px; border-right: 1px solid #334155; }
+        .status-item { flex-direction: column; display: flex; justify-content: center; align-items: center; padding: 12px 2px; border-right: 1px solid #334155; }
         
-        /* チェックボックス(タグ) */
+        /* 下部ナビ */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid #e2e8f0; padding: 10px 0; z-index: 40; }
+        .nav-item { flex: 1; text-align: center; font-size: 0.7rem; font-weight: bold; color: #94a3b8; }
+        .nav-item.active { color: #3b82f6; }
+        .nav-icon { font-size: 1.4rem; display: block; margin-bottom: 2px; }
+
+        /* タグ */
         .tag-checkbox { display: none; }
-        .tag-label { padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: #64748b; cursor: pointer; transition: 0.2s; }
+        .tag-label { padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 0.75rem; font-weight: bold; color: #64748b; cursor: pointer; }
         .tag-checkbox:checked + .tag-label { background-color: #3b82f6; color: white; border-color: #3b82f6; }
 
-        /* 自作ダイアログ */
-        #custom-modal { background: rgba(0,0,0,0.5); z-index: 100; }
-        .modal-content { max-height: 85vh; overflow-y: auto; }
-
-        .type-btn { padding: 12px 4px; border: 2px solid #e2e8f0; border-radius: 10px; font-weight: bold; font-size: 0.9rem; background: white; width: 100%; }
-        .type-btn.active { border-color: #3b82f6; background-color: #eff6ff; color: #1d4ed8; }
+        .type-btn { padding: 12px 4px; border: 2px solid #e2e8f0; border-radius: 12px; font-weight: bold; font-size: 0.9rem; background: white; width: 100%; color: #64748b; }
+        .type-btn.active { border-color: #3b82f6; background-color: #eff6ff; color: #1d4ed8; border-width: 3px; }
     </style>
 </head>
 <body class="max-w-md mx-auto p-4">
 
-    <header class="flex justify-between items-center mb-4">
+    <header id="app-header" class="flex justify-between items-center mb-4">
         <div>
             <h1 class="text-xl font-bold text-gray-800">🚕 TAXI日報 PRO</h1>
-            <p id="clock" class="text-xs text-gray-500 font-mono"></p>
+            <p id="clock" class="text-[10px] text-gray-400 font-mono"></p>
         </div>
-        <button onclick="openSettings()" class="p-2 bg-gray-100 rounded-full">⚙️</button>
+        <button onclick="openSettings()" class="p-2 bg-gray-100 rounded-full text-gray-400 text-xl">⚙️</button>
     </header>
 
-    <div id="main-area"></div>
+    <div id="page-main">
+        <div id="main-controls" class="mb-4"></div>
 
-    <div class="status-container">
-        <div class="status-item" style="width: 15%;">
-            <span class="text-[9px] text-gray-400">回数</span>
-            <span class="text-xl font-bold" id="total-count">0</span>
-        </div>
-        <div class="status-item bg-gray-800" style="width: 55%;">
-            <span class="text-[9px] text-gray-400">売上(税込)</span>
-            <span class="text-2xl font-bold text-yellow-400" id="total-sales">0</span>
-            <span class="text-[9px] text-emerald-400">税抜: <span id="total-net">0</span></span>
-        </div>
-        <div class="status-item" style="width: 30%; border-right: none;">
-            <span class="text-[9px] text-gray-400">営業距離</span>
-            <span class="text-xl font-bold" id="total-km">0.0</span>
-            <span class="text-[9px] text-gray-500">km</span>
-        </div>
-    </div>
-
-    <button onclick="openHistory()" class="w-full bg-white border border-gray-200 py-3 rounded-xl text-gray-600 font-bold mb-4 shadow-sm text-sm">📖 過去の勤務履歴を表示</button>
-
-    <div id="modal-settings" class="fixed inset-0 hidden flex items-center justify-center p-4 bg-black/50 z-50">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h2 class="font-bold text-lg mb-4 text-center">アプリ設定</h2>
-            <div class="space-y-4 mb-6">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">勤務体制</label>
-                    <select id="set-work-mode" class="w-full p-2 border rounded-lg">
-                        <option value="隔日勤務">隔日勤務</option>
-                        <option value="昼勤務">昼勤務</option>
-                        <option value="夜勤務">夜勤務</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between p-2 border-b">
-                    <span class="text-sm">メモ欄を表示</span>
-                    <input type="checkbox" id="set-show-memo" checked>
-                </div>
-                <div class="flex items-center justify-between p-2 border-b">
-                    <span class="text-sm">営業距離を表示</span>
-                    <input type="checkbox" id="set-show-dist" checked>
-                </div>
+        <div class="status-container shadow-lg">
+            <div class="status-item" style="width: 20%;">
+                <span class="text-[9px] text-gray-400">回数</span>
+                <span class="text-xl font-bold" id="dash-count">0</span>
             </div>
-            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">設定を保存</button>
-            <button onclick="closeModal('modal-settings')" class="w-full text-gray-400 py-2 mt-2 text-xs">閉じる</button>
+            <div class="status-item bg-gray-800" style="width: 55%;">
+                <span class="text-[9px] text-gray-400">売上(税込)</span>
+                <span class="text-2xl font-bold text-yellow-400" id="dash-sales">0</span>
+                <span class="text-[9px] text-emerald-400 font-bold">税抜: ¥<span id="dash-net">0</span></span>
+            </div>
+            <div class="status-item" style="width: 25%; border-right: none;">
+                <span class="text-[9px] text-gray-400">営業距離</span>
+                <div class="flex items-baseline"><span class="text-xl font-bold" id="dash-km">0.0</span><span class="text-[9px] ml-0.5">km</span></div>
+            </div>
         </div>
-    </div>
 
-    <div id="modal-history" class="fixed inset-0 hidden flex items-center justify-center p-4 bg-black/50 z-50">
-        <div class="bg-gray-100 rounded-2xl w-full max-w-md h-[90vh] flex flex-col">
-            <div class="p-4 bg-white rounded-t-2xl border-b">
-                <h2 class="font-bold text-center mb-3">勤務履歴検索</h2>
-                <input type="text" id="hist-search" placeholder="フリーワード検索" class="w-full p-2 border rounded-lg text-sm mb-2" oninput="renderHistoryList()">
-                <div class="flex gap-1 overflow-x-auto pb-1" id="hist-tags">
+        <div id="input-form" class="hidden card border-t-4 border-blue-500 bg-blue-50/30">
+            <h2 id="form-title" class="text-center font-bold text-blue-800 mb-4">記録入力</h2>
+            
+            <div class="space-y-4">
+                <div class="flex flex-wrap gap-1.5 justify-center">
+                    ${['病院', '駅', 'ホテル', '空港', '万収', '指名'].map(tag => `
+                        <input type="checkbox" id="tag-${tag}" class="tag-checkbox" onchange="toggleTag('${tag}')">
+                        <label for="tag-${tag}" class="tag-label">${tag}</label>
+                    `).join('')}
+                </div>
+
+                <div id="fare-section" class="hidden space-y-4">
+                    <div class="text-center bg-white p-3 rounded-xl border">
+                        <div class="text-[10px] text-gray-400">${state.tempRide.startPlace} ⮕ ${state.tempRide.endPlace || '取得中...'}</div>
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">売上合計（税込・高速込）</label>
+                        <input type="number" id="inp-fare" class="w-full p-4 border rounded-2xl text-3xl font-bold text-center text-blue-700" inputmode="numeric">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-red-500 mb-1">高速代（売上から引かれます）</label>
+                        <input type="number" id="inp-hiway" class="w-full p-2 border rounded-xl text-xl font-bold text-center text-red-500" inputmode="numeric" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div id="f-dist"><label class="block text-xs font-bold text-gray-500 mb-1">営業距離(km)</label><input type="number" id="inp-dist" class="w-full p-3 border rounded-xl text-center font-bold" inputmode="decimal"></div>
+                    <div id="f-memo"><label class="block text-xs font-bold text-gray-500 mb-1">メモ</label><input type="text" id="inp-memo" class="w-full p-3 border rounded-xl text-sm"></div>
+                </div>
+
+                <button onclick="handleMainAction()" id="action-btn" class="btn-main bg-blue-600 text-white shadow-blue-200">次へ</button>
+                <button onclick="cancelInput()" class="w-full text-gray-400 text-xs py-2 underline">キャンセル</button>
             </div>
-            <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-            <div class="p-4 bg-white border-t rounded-b-2xl">
-                <button onclick="closeModal('modal-history')" class="w-full bg-gray-800 text-white py-3 rounded-xl font-bold">閉じる</button>
+        </div>
+        <div id="current-logs" class="space-y-2 mt-4"></div>
+    </div>
+
+    <div id="page-history" class="hidden">
+        <div class="p-2">
+            <h2 class="text-xl font-bold mb-4 border-l-4 border-blue-500 pl-3">勤務履歴</h2>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="hist-search" placeholder="検索..." class="flex-1 p-2 border rounded-xl text-sm" oninput="renderHistory()">
             </div>
+            <div id="history-content" class="space-y-3"></div>
         </div>
     </div>
 
-    <div id="modal-msg" class="fixed inset-0 hidden flex items-center justify-center p-4 bg-black/50 z-[100]">
-        <div class="bg-white rounded-2xl p-6 w-full max-w-xs text-center shadow-2xl">
-            <p id="msg-text" class="text-gray-800 font-bold mb-6"></p>
-            <div id="msg-buttons" class="flex gap-2"></div>
+    <div id="page-share" class="hidden text-center p-6 bg-slate-900 min-height-[80vh] rounded-3xl text-white">
+        <h2 class="text-xl font-bold mb-8">✨ 本日の乗務リザルト ✨</h2>
+        <div class="bg-white/10 p-6 rounded-2xl mb-4 border border-white/20">
+            <p class="text-[10px] uppercase opacity-60">Net Sales</p>
+            <p class="text-4xl font-black text-yellow-400">¥<span id="share-net">0</span></p>
         </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white/10 p-4 rounded-2xl border border-white/20"><p class="text-[10px] opacity-60">COUNT</p><p class="text-2xl font-bold" id="share-count">0</p></div>
+            <div class="bg-white/10 p-4 rounded-2xl border border-white/20"><p class="text-[10px] opacity-60">DISTANCE</p><p class="text-2xl font-bold" id="share-km">0.0</p></div>
+        </div>
+        <p class="mt-12 text-[10px] opacity-40 italic font-serif">TAXI 日報 PRO - 2025</p>
+    </div>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" id="nav-main" onclick="switchPage('main')"><span class="nav-icon">🚕</span>乗務</div>
+        <div class="nav-item" id="nav-history" onclick="switchPage('history')"><span class="nav-icon">📖</span>履歴</div>
+        <div class="nav-item" id="nav-share" onclick="switchPage('share')"><span class="nav-icon">✨</span>シェア</div>
+    </nav>
+
+    <div id="modal-container" class="fixed inset-0 hidden z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div id="modal-content" class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"></div>
     </div>
 
     <script>
-        // データの固定キー
-        const APP_DB = 'taxi_app_v2025_data';
-        const APP_SET = 'taxi_app_v2025_settings';
+        const DB_KEY = 'taxi_final_db_2025';
+        const SET_KEY = 'taxi_final_settings_2025';
 
         let state = {
             status: 'OFF', // OFF, WAITING, RIDING, FINISHING
             currentShift: null,
             shifts: [],
-            settings: { mode: '隔日勤務', showMemo: true, showDist: true },
-            tempRide: { type: '一般', startPlace: '', endPlace: '', tags: [], fare: 0, hiway: 0, dist: 0, memo: '' }
+            tempRide: { type: '一般', tags: [], startPlace: '', endPlace: '' },
+            settings: { mode: '隔日勤務', showMemo: true, showDist: true, closing: 19 }
         };
 
-        const TAG_LIST = ['病院', '駅', 'ホテル', '空港', '万収', '指名'];
-
         window.onload = () => {
-            const savedData = localStorage.getItem(APP_DB);
-            if (savedData) {
-                const parsed = JSON.parse(savedData);
-                state.shifts = parsed.shifts || [];
-                state.currentShift = parsed.currentShift || null;
-                state.status = parsed.status || 'OFF';
-            }
-            state.settings = JSON.parse(localStorage.getItem(APP_SET) || JSON.stringify(state.settings));
+            const d = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+            state.shifts = d.shifts || [];
+            state.currentShift = d.currentShift || null;
+            state.status = d.status || 'OFF';
+            state.settings = JSON.parse(localStorage.getItem(SET_KEY) || JSON.stringify(state.settings));
             
-            render();
             startClock();
+            render();
         };
 
         function startClock() {
+            const el = document.getElementById('clock');
             const update = () => {
-                const now = new Date();
-                document.getElementById('clock').innerText = now.toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+                const n = new Date();
+                el.innerText = n.toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' });
             };
             update(); setInterval(update, 1000);
         }
 
-        // --- GPS取得機能 ---
-        async function getPlaceName() {
-            return new Promise((resolve) => {
-                if (!navigator.geolocation) return resolve("位置情報不可");
-                navigator.geolocation.getCurrentPosition(async (pos) => {
+        async function getGPS() {
+            return new Promise(r => {
+                if(!navigator.geolocation) return r("GPS不可");
+                navigator.geolocation.getCurrentPosition(async p => {
                     try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=ja`);
-                        const data = await res.json();
-                        const addr = data.address;
-                        resolve(addr.suburb || addr.city_district || addr.city || "不明な地点");
-                    } catch { resolve("取得失敗"); }
-                }, () => resolve("圏外/拒否"));
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.coords.latitude}&lon=${p.coords.longitude}&accept-language=ja`);
+                        const j = await res.json();
+                        r(j.address.suburb || j.address.city_district || j.address.city || "地点取得完了");
+                    } catch { r("取得エラー"); }
+                }, () => r("GPS信号なし"));
             });
         }
 
-        // --- 描画処理 ---
         function render() {
-            const area = document.getElementById('main-area');
-            area.innerHTML = '';
-
-            if (state.status === 'OFF') {
-                area.innerHTML = `<button onclick="startShift()" class="btn-main bg-emerald-600 text-white mb-6">勤務開始（出庫）</button>`;
-            } 
-            else if (state.status === 'WAITING') {
-                area.innerHTML = `
+            const ctrl = document.getElementById('main-controls');
+            const form = document.getElementById('input-form');
+            const fareSec = document.getElementById('fare-section');
+            const btn = document.getElementById('action-btn');
+            const title = document.getElementById('form-title');
+            
+            ctrl.innerHTML = '';
+            
+            if(state.status === 'OFF') {
+                ctrl.innerHTML = `<button onclick="startShift()" class="btn-main bg-emerald-600 text-white shadow-emerald-100">勤務開始（出庫）</button>`;
+                form.classList.add('hidden');
+            } else if(state.status === 'WAITING') {
+                ctrl.innerHTML = `
                     <div class="grid grid-cols-3 gap-2 mb-4">
-                        <button onclick="setRideType('一般')" class="type-btn ${state.tempRide.type==='一般'?'active':''}">🚕 一般</button>
-                        <button onclick="setRideType('無線')" class="type-btn ${state.tempRide.type==='無線'?'active':''}">📡 無線</button>
-                        <button onclick="setRideType('付待')" class="type-btn ${state.tempRide.type==='付待'?'active':''}">🚉 付待</button>
+                        <button onclick="setType('一般')" class="type-btn ${state.tempRide.type==='一般'?'active':''}">🚕 一般</button>
+                        <button onclick="setType('無線')" class="type-btn ${state.tempRide.type==='無線'?'active':''}">📡 無線</button>
+                        <button onclick="setType('付待')" class="type-btn ${state.tempRide.type==='付待'?'active':''}">🚉 付待</button>
                     </div>
-                    <button onclick="startRide()" class="btn-main bg-blue-600 text-white mb-8">乗車開始</button>
-                    <button onclick="confirmEndShift()" class="w-full bg-red-500 text-white py-4 rounded-xl font-extrabold shadow-lg mb-6">🏁 勤務終了（帰庫）</button>
+                    <button onclick="startRide()" class="btn-main bg-blue-600 text-white shadow-blue-100">乗車開始</button>
+                    <button onclick="confirmEnd()" class="w-full text-red-500 font-bold py-4 text-sm underline text-center">勤務終了（帰庫）</button>
                 `;
-            }
-            else if (state.status === 'RIDING') {
-                area.innerHTML = `
-                    <div class="card border-l-8 border-orange-500">
-                        <div class="text-center font-bold text-orange-600 mb-4 animate-pulse">賃走中：${state.tempRide.type}</div>
-                        <div class="flex flex-wrap gap-2 justify-center mb-6">
-                            ${TAG_LIST.map(tag => `
-                                <input type="checkbox" id="tag-${tag}" class="tag-checkbox" onchange="toggleTag('${tag}')" ${state.tempRide.tags.includes(tag)?'checked':''}>
-                                <label for="tag-${tag}" class="tag-label">${tag}</label>
-                            `).join('')}
-                        </div>
-                        <button onclick="finishRide()" class="btn-main bg-blue-600 text-white mb-4">お客様降車（清算）</button>
-                        ${state.settings.showMemo ? `<textarea id="memo-riding" class="w-full p-2 border rounded text-sm mb-2" placeholder="実車中のメモ..." oninput="state.tempRide.memo=this.value">${state.tempRide.memo}</textarea>` : ''}
-                        ${state.settings.showDist ? `<div class="text-right text-gray-400 text-xs italic">営業距離の入力は降車時に行います</div>` : ''}
-                    </div>
-                `;
-            }
-            else if (state.status === 'FINISHING') {
-                area.innerHTML = `
-                    <div class="card bg-blue-50 border-t-4 border-blue-600">
-                        <div class="text-center mb-4">
-                            <div class="text-xs text-gray-500">実車地：${state.tempRide.startPlace}</div>
-                            <div class="text-xl my-1">⬇️</div>
-                            <div class="font-bold text-blue-800">${state.tempRide.endPlace || '地名取得中...'}</div>
-                        </div>
-                        
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold">売上(税込)</span>
-                                <input type="number" id="inp-fare" class="text-right text-2xl font-bold w-1/2 p-2 border rounded" inputmode="numeric" placeholder="0">
-                            </div>
-                            <div class="border-t border-dashed my-2"></div>
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-red-600">高速代</span>
-                                <input type="number" id="inp-hiway" class="text-right text-xl font-bold text-red-600 w-1/2 p-2 border rounded" inputmode="numeric" placeholder="0">
-                            </div>
-                            
-                            <div class="flex flex-wrap gap-1 justify-center py-2">
-                                ${TAG_LIST.map(tag => `
-                                    <input type="checkbox" id="tag2-${tag}" class="tag-checkbox" onchange="toggleTag('${tag}')" ${state.tempRide.tags.includes(tag)?'checked':''}>
-                                    <label for="tag2-${tag}" class="tag-label">${tag}</label>
-                                `).join('')}
-                            </div>
-
-                            ${state.settings.showMemo ? `<input type="text" id="inp-memo" value="${state.tempRide.memo}" class="w-full p-2 border rounded text-sm" placeholder="メモ">` : ''}
-                            ${state.settings.showDist ? `<div class="flex items-center justify-between"><span class="text-sm">営業距離(km)</span><input type="number" id="inp-dist" class="text-right w-1/3 p-2 border rounded" inputmode="decimal" placeholder="0.0"></div>` : ''}
-                            
-                            <button onclick="commitRide()" class="btn-main bg-emerald-600 text-white">記録を保存</button>
-                            <button onclick="state.status='WAITING';render();" class="w-full text-gray-400 text-xs py-2">入力を中止</button>
-                        </div>
-                    </div>
-                `;
+                form.classList.add('hidden');
+            } else if(state.status === 'RIDING') {
+                form.classList.remove('hidden');
+                fareSec.classList.add('hidden');
+                title.innerText = `実車中 [${state.tempRide.type}]`;
+                btn.innerText = "お客様降車（清算へ）";
+                ctrl.innerHTML = `<div class="p-2 text-red-500 font-bold animate-pulse text-center">賃走中...</div>`;
+            } else if(state.status === 'FINISHING') {
+                form.classList.remove('hidden');
+                fareSec.classList.remove('hidden');
+                title.innerText = "清算入力";
+                btn.innerText = "記録を保存する";
             }
 
-            updateDashboard();
-            saveToStorage();
+            updateDash();
+            renderCurrentLogs();
+            save();
         }
 
-        function updateDashboard() {
-            const active = state.currentShift || { rides: [] };
-            const sales = active.rides.reduce((s, r) => s + Number(r.fare), 0);
-            const km = active.rides.reduce((s, r) => s + Number(r.dist), 0);
-            document.getElementById('total-count').innerText = active.rides.length;
-            document.getElementById('total-sales').innerText = sales.toLocaleString();
-            document.getElementById('total-net').innerText = Math.floor(sales / 1.1).toLocaleString();
-            document.getElementById('total-km').innerText = km.toFixed(1);
-        }
-
-        // --- ロジック ---
-        function startShift() {
-            state.currentShift = { id: Date.now(), date: new Date().toLocaleDateString('ja-JP'), rides: [] };
-            state.status = 'WAITING';
-            render();
-        }
-
-        function setRideType(t) { state.tempRide.type = t; render(); }
+        function setType(t) { state.tempRide.type = t; render(); }
         
         async function startRide() {
             state.status = 'RIDING';
-            state.tempRide = { ...state.tempRide, startPlace: '取得中...', endPlace: '', fare: 0, hiway: 0, dist: 0, memo: '', tags: [] };
+            state.tempRide = { ...state.tempRide, tags: [], startPlace: '取得中...', endPlace: '' };
             render();
-            state.tempRide.startPlace = await getPlaceName();
+            state.tempRide.startPlace = await getGPS();
             render();
         }
 
-        async function finishRide() {
-            state.status = 'FINISHING';
-            render();
-            state.tempRide.endPlace = await getPlaceName();
-            render();
+        async function handleMainAction() {
+            if(state.status === 'RIDING') {
+                state.status = 'FINISHING';
+                render();
+                state.tempRide.endPlace = await getGPS();
+                render();
+            } else {
+                const f = parseInt(document.getElementById('inp-fare').value) || 0;
+                const h = parseInt(document.getElementById('inp-hiway').value) || 0;
+                state.currentShift.rides.push({
+                    ...state.tempRide,
+                    fare: f - h, hiway: h,
+                    dist: parseFloat(document.getElementById('inp-dist').value) || 0,
+                    memo: document.getElementById('inp-memo').value,
+                    time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})
+                });
+                state.status = 'WAITING';
+                state.tempRide = { type: '一般', tags: [] };
+                render();
+            }
         }
 
         function toggleTag(t) {
-            if (state.tempRide.tags.includes(t)) state.tempRide.tags = state.tempRide.tags.filter(x => x !== t);
+            if(state.tempRide.tags.includes(t)) state.tempRide.tags = state.tempRide.tags.filter(x=>x!==t);
             else state.tempRide.tags.push(t);
         }
 
-        function commitRide() {
-            const f = parseInt(document.getElementById('inp-fare').value) || 0;
-            const h = parseInt(document.getElementById('inp-hiway').value) || 0;
-            const d = parseFloat(document.getElementById('inp-dist')?.value) || 0;
-            const m = document.getElementById('inp-memo')?.value || '';
-            
-            state.currentShift.rides.push({
-                ...state.tempRide,
-                time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                fare: f - h,
-                hiway: h,
-                dist: d,
-                memo: m
+        function updateDash() {
+            const a = state.currentShift || { rides: [] };
+            const s = a.rides.reduce((v, r) => v + Number(r.fare), 0);
+            document.getElementById('dash-count').innerText = a.rides.length;
+            document.getElementById('dash-sales').innerText = s.toLocaleString();
+            document.getElementById('dash-net').innerText = Math.floor(s/1.1).toLocaleString();
+            document.getElementById('dash-km').innerText = a.rides.reduce((v, r) => v + Number(r.dist), 0).toFixed(1);
+        }
+
+        function renderCurrentLogs() {
+            const el = document.getElementById('current-logs');
+            if(state.status === 'OFF') return el.innerHTML = '';
+            el.innerHTML = `<h3 class="text-[10px] text-gray-400 text-center uppercase tracking-widest mb-2">Today's Logs</h3>`;
+            [...state.currentShift.rides].reverse().forEach((r, i) => {
+                el.innerHTML += `<div class="bg-white p-3 rounded-xl border mb-2 flex justify-between items-center text-sm shadow-sm">
+                    <div><b>${r.time}</b> ¥${Number(r.fare).toLocaleString()} [${r.type}]<br><span class="text-[9px] text-gray-400">${r.startPlace} ⮕ ${r.endPlace}</span></div>
+                    <button onclick="deleteRide(${state.currentShift.rides.length-1-i})" class="text-red-400 text-[10px] font-bold">削除</button>
+                </div>`;
             });
-            state.status = 'WAITING';
-            state.tempRide = { type: '一般', tags: [] };
-            render();
         }
 
-        function confirmEndShift() {
-            showMsg("本日の勤務を終了して保存しますか？", [
-                { text: "終了", color: "bg-red-600", click: () => {
-                    state.shifts.push(state.currentShift);
-                    state.currentShift = null;
-                    state.status = 'OFF';
-                    closeModal('modal-msg');
-                    render();
-                }},
-                { text: "戻る", color: "bg-gray-200 text-gray-800", click: () => closeModal('modal-msg') }
-            ]);
-        }
-
-        // --- 設定・履歴 ---
-        function openSettings() {
-            document.getElementById('modal-settings').classList.remove('hidden');
-        }
-        function saveSettings() {
-            state.settings.mode = document.getElementById('set-work-mode').value;
-            state.settings.showMemo = document.getElementById('set-show-memo').checked;
-            state.settings.showDist = document.getElementById('set-show-dist').checked;
-            localStorage.setItem(APP_SET, JSON.stringify(state.settings));
-            closeModal('modal-settings');
-            render();
-        }
-
-        function openHistory() {
-            document.getElementById('modal-history').classList.remove('hidden');
-            const tagArea = document.getElementById('hist-tags');
-            tagArea.innerHTML = TAG_LIST.map(t => `<button onclick="filterHistory('${t}')" class="bg-gray-200 px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap">${t}</button>`).join('');
-            renderHistoryList();
-        }
-
-        function renderHistoryList() {
-            const list = document.getElementById('history-list');
-            const word = document.getElementById('hist-search').value;
-            list.innerHTML = '';
-            
-            [...state.shifts].reverse().forEach(s => {
-                const total = s.rides.reduce((sum, r) => sum + Number(r.fare), 0);
-                const match = s.rides.some(r => r.memo.includes(word) || r.tags.join('').includes(word));
-                if (word && !match && !s.date.includes(word)) return;
-
-                list.innerHTML += `
-                    <div class="bg-white p-4 rounded-xl shadow-sm border">
-                        <div class="flex justify-between font-bold text-sm mb-2"><span>${s.date}</span><span class="text-blue-600">¥${total.toLocaleString()}</span></div>
-                        <div class="space-y-1">
-                            ${s.rides.map(r => `
-                                <div class="text-[10px] text-gray-500 border-b pb-1 flex justify-between">
-                                    <span>${r.time} ${r.startPlace}→${r.endPlace}</span>
-                                    <span>¥${Number(r.fare).toLocaleString()}</span>
-                                </div>
-                            `).join('')}
-                        </div>
+        function startShift() { state.currentShift = { date: new Date().toLocaleDateString('ja-JP'), rides: [] }; state.status = 'WAITING'; render(); }
+        function cancelInput() { if(confirm("入力を破棄しますか？")) { state.status = 'WAITING'; render(); } }
+        function deleteRide(idx) { if(confirm("削除しますか？")) { state.currentShift.rides.splice(idx, 1); render(); } }
+        
+        function confirmEnd() {
+            openModal(`
+                <div class="p-8 text-center">
+                    <p class="font-bold text-lg mb-6 text-gray-800">本日の乗務を終了し、<br>日報を保存しますか？</p>
+                    <div class="flex gap-2">
+                        <button onclick="closeModal()" class="flex-1 py-4 rounded-2xl bg-gray-100 font-bold text-gray-500">戻る</button>
+                        <button onclick="finishShift()" class="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold">終了</button>
                     </div>
-                `;
+                </div>
+            `);
+        }
+
+        function finishShift() {
+            state.shifts.push(state.currentShift);
+            state.currentShift = null; state.status = 'OFF';
+            closeModal(); render();
+        }
+
+        function switchPage(p) {
+            ['main','history','share'].forEach(id => {
+                document.getElementById('page-'+id).classList.toggle('hidden', id !== p);
+                document.getElementById('nav-'+id).classList.toggle('active', id === p);
+            });
+            if(p === 'history') renderHistory();
+            if(p === 'share') renderShare();
+        }
+
+        function renderHistory() {
+            const el = document.getElementById('history-content');
+            const q = document.getElementById('hist-search').value;
+            el.innerHTML = '';
+            [...state.shifts].reverse().forEach(s => {
+                const total = s.rides.reduce((v, r) => v + Number(r.fare), 0);
+                if(q && !s.date.includes(q) && !JSON.stringify(s.rides).includes(q)) return;
+                el.innerHTML += `<div class="card p-4"><div class="flex justify-between font-bold text-sm"><span>${s.date}</span><span class="text-blue-600">¥${total.toLocaleString()}</span></div><div class="text-[9px] text-gray-400 mt-2">${s.rides.map(r=>`${r.time} ¥${r.fare}`).join(' / ')}</div></div>`;
             });
         }
 
-        function filterHistory(tag) { document.getElementById('hist-search').value = tag; renderHistoryList(); }
-
-        // --- ユーティリティ ---
-        function showMsg(text, buttons) {
-            document.getElementById('msg-text').innerText = text;
-            const btnArea = document.getElementById('msg-buttons');
-            btnArea.innerHTML = '';
-            buttons.forEach(b => {
-                const btn = document.createElement('button');
-                btn.className = `flex-1 py-3 rounded-xl font-bold text-sm ${b.color}`;
-                btn.innerText = b.text;
-                btn.onclick = b.click;
-                btn.type = "button";
-                btnArea.appendChild(btn);
-            });
-            document.getElementById('modal-msg').classList.remove('hidden');
+        function renderShare() {
+            const a = state.currentShift || { rides: [] };
+            const s = a.rides.reduce((v, r) => v + Number(r.fare), 0);
+            document.getElementById('share-net').innerText = Math.floor(s/1.1).toLocaleString();
+            document.getElementById('share-count').innerText = a.rides.length;
+            document.getElementById('share-km').innerText = a.rides.reduce((v, r) => v + Number(r.dist), 0).toFixed(1);
         }
 
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        function saveToStorage() { localStorage.setItem(APP_DB, JSON.stringify({ shifts: state.shifts, currentShift: state.currentShift, status: state.status })); }
-        function clearSystem() { if(confirm('全データを削除しますか？')) { localStorage.clear(); location.reload(); } }
+        function openSettings() {
+            openModal(`
+                <div class="p-6">
+                    <h2 class="font-bold text-center mb-6">アプリ設定</h2>
+                    <div class="space-y-4">
+                        <label class="block text-xs text-gray-400">勤務形態</label>
+                        <select id="s-mode" class="w-full p-3 border rounded-xl">${['日勤','夜勤','隔日勤務'].map(m=>`<option ${state.settings.mode===m?'selected':''}>${m}</option>`).join('')}</select>
+                        <div class="flex justify-between items-center py-2 border-b"><span class="text-sm">メモ欄を表示</span><input type="checkbox" id="s-memo" ${state.settings.showMemo?'checked':''}></div>
+                        <div class="flex justify-between items-center py-2 border-b"><span class="text-sm">営業距離を表示</span><input type="checkbox" id="s-dist" ${state.settings.showDist?'checked':''}></div>
+                        <button onclick="saveSet()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold mt-4 shadow-lg">設定を保存</button>
+                        <button onclick="clearSys()" class="w-full text-red-400 text-[10px] mt-4">全データリセット</button>
+                    </div>
+                </div>
+            `);
+        }
+        function saveSet() {
+            state.settings = { mode: document.getElementById('s-mode').value, showMemo: document.getElementById('s-memo').checked, showDist: document.getElementById('s-dist').checked };
+            localStorage.setItem(SET_KEY, JSON.stringify(state.settings));
+            closeModal(); render();
+        }
+
+        function openModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('modal-container').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal-container').classList.add('hidden'); }
+        function save() { localStorage.setItem(DB_KEY, JSON.stringify({ shifts: state.shifts, currentShift: state.currentShift, status: state.status })); }
+        function clearSys() { if(confirm("リセットしますか？")) { localStorage.clear(); location.reload(); } }
     </script>
 </body>
 </html>
