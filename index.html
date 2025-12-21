@@ -2,121 +2,118 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAXI日報 Ultimate</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TAXI日報 PRO Ver 5.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: sans-serif; background-color: #f8fafc; padding-bottom: 80px; }
         .btn-main { width: 100%; padding: 18px; font-size: 1.25rem; font-weight: bold; border-radius: 16px; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .btn-main:active { transform: translateY(2px); box-shadow: none; }
         .card { background: white; padding: 1.25rem; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
-        
-        /* ステータスボード */
-        .status-container { display: flex; background: #1e293b; color: white; border-radius: 16px; overflow: hidden; margin-bottom: 1rem; }
+        .status-container { display: flex; background: #1e293b; color: white; border-radius: 16px; overflow: hidden; margin-top: 1rem; margin-bottom: 0.5rem; }
         .status-item { flex-direction: column; display: flex; justify-content: center; align-items: center; padding: 12px 2px; border-right: 1px solid #334155; }
-        
-        /* 下部ナビ */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid #e2e8f0; padding: 10px 0; z-index: 40; }
         .nav-item { flex: 1; text-align: center; font-size: 0.7rem; font-weight: bold; color: #94a3b8; }
         .nav-item.active { color: #3b82f6; }
         .nav-icon { font-size: 1.4rem; display: block; margin-bottom: 2px; }
-
-        /* タグ */
         .tag-checkbox { display: none; }
-        .tag-label { padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 0.75rem; font-weight: bold; color: #64748b; cursor: pointer; }
+        .tag-label { padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: #64748b; cursor: pointer; }
         .tag-checkbox:checked + .tag-label { background-color: #3b82f6; color: white; border-color: #3b82f6; }
-
         .type-btn { padding: 12px 4px; border: 2px solid #e2e8f0; border-radius: 12px; font-weight: bold; font-size: 0.9rem; background: white; width: 100%; color: #64748b; }
         .type-btn.active { border-color: #3b82f6; background-color: #eff6ff; color: #1d4ed8; border-width: 3px; }
+        .toggle-switch { width: 44px; height: 24px; background: #e2e8f0; border-radius: 12px; position: relative; cursor: pointer; transition: 0.3s; }
+        .toggle-switch::after { content: ''; width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: 0.3s; }
+        input:checked + .toggle-switch { background: #3b82f6; }
+        input:checked + .toggle-switch::after { left: 22px; }
+        .hist-detail { display: none; }
+        .hist-detail.open { display: block; }
+        #page-share { background-color: #f1f5f9; min-height: 100vh; padding: 10px 12px; }
+        .result-card { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 32px; padding: 22px 20px; box-shadow: 0 15px 30px rgba(0,0,0,0.4); width: 100%; }
+        .top3-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 14px; margin-top: 10px; }
+        .top3-item { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0; }
+        .top3-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body class="max-w-md mx-auto p-4">
 
-    <header id="app-header" class="flex justify-between items-center mb-4">
-        <div>
-            <h1 class="text-xl font-bold text-gray-800">🚕 TAXI日報 PRO</h1>
-            <p id="clock" class="text-[10px] text-gray-400 font-mono"></p>
-        </div>
+    <header class="flex justify-between items-center mb-4">
+        <div><h1 class="text-xl font-bold text-gray-800">🚕 TAXI日報 PRO</h1><p id="clock" class="text-[10px] text-gray-400 font-mono"></p></div>
         <button onclick="openSettings()" class="p-2 bg-gray-100 rounded-full text-gray-400 text-xl">⚙️</button>
     </header>
 
     <div id="page-main">
+        <div id="type-selector-container" class="hidden grid grid-cols-3 gap-2 mb-4">
+            <button onclick="setType('一般')" class="type-btn" id="type-一般">🚕 一般</button>
+            <button onclick="setType('無線')" class="type-btn" id="type-無線">📡 無線</button>
+            <button onclick="setType('付待')" class="type-btn" id="type-付待">🚉 付待</button>
+        </div>
         <div id="main-controls" class="mb-4"></div>
 
         <div class="status-container shadow-lg">
-            <div class="status-item" style="width: 20%;">
-                <span class="text-[9px] text-gray-400">回数</span>
-                <span class="text-xl font-bold" id="dash-count">0</span>
-            </div>
+            <div class="status-item" style="width: 20%;"><span class="text-[9px] text-gray-400">回数</span><span class="text-xl font-bold" id="dash-count">0</span></div>
             <div class="status-item bg-gray-800" style="width: 55%;">
-                <span class="text-[9px] text-gray-400">売上(税込)</span>
-                <span class="text-2xl font-bold text-yellow-400" id="dash-sales">0</span>
-                <span class="text-[9px] text-emerald-400 font-bold">税抜: ¥<span id="dash-net">0</span></span>
+                <span class="text-[9px] text-emerald-400 font-bold uppercase">税抜営収</span>
+                <span class="text-2xl font-bold text-yellow-400" id="dash-net">0</span>
+                <span class="text-[9px] text-gray-400">税込合計: ¥<span id="dash-sales">0</span></span>
             </div>
-            <div class="status-item" style="width: 25%; border-right: none;">
-                <span class="text-[9px] text-gray-400">営業距離</span>
-                <div class="flex items-baseline"><span class="text-xl font-bold" id="dash-km">0.0</span><span class="text-[9px] ml-0.5">km</span></div>
-            </div>
+            <div class="status-item" style="width: 25%; border-right: none;"><span class="text-[9px] text-gray-400">営業距離</span><div class="flex items-baseline"><span class="text-xl font-bold" id="dash-km">0.0</span><span class="text-[9px] ml-0.5 text-gray-400 font-bold">km</span></div></div>
         </div>
 
-        <div id="input-form" class="hidden card border-t-4 border-blue-500 bg-blue-50/30">
-            <h2 id="form-title" class="text-center font-bold text-blue-800 mb-4">記録入力</h2>
-            
+        <div id="end-shift-container" class="hidden text-center mb-6">
+            <button onclick="switchPage('share')" class="text-red-500 font-black text-lg underline decoration-2 underline-offset-4">勤務終了（帰庫）</button>
+        </div>
+
+        <div id="input-form" class="hidden card">
+            <h2 id="form-title" class="text-center font-bold text-gray-700 mb-4 text-lg">清算入力</h2>
             <div class="space-y-4">
-                <div class="flex flex-wrap gap-1.5 justify-center">
-                    ${['病院', '駅', 'ホテル', '空港', '万収', '指名'].map(tag => `
-                        <input type="checkbox" id="tag-${tag}" class="tag-checkbox" onchange="toggleTag('${tag}')">
-                        <label for="tag-${tag}" class="tag-label">${tag}</label>
-                    `).join('')}
+                <div id="route-display-area" class="hidden bg-blue-50/50 rounded-xl p-4 border border-blue-100 text-center mb-4">
+                    <div id="start-p-display" class="text-sm text-gray-700 font-bold leading-tight"></div>
+                    <div class="text-blue-400 my-1 font-bold text-lg leading-none">↓</div>
+                    <div id="end-p-display" class="text-base text-blue-800 font-black leading-tight"></div>
                 </div>
-
-                <div id="fare-section" class="hidden space-y-4">
-                    <div class="text-center bg-white p-3 rounded-xl border">
-                        <div class="text-[10px] text-gray-400">${state.tempRide.startPlace} ⮕ ${state.tempRide.endPlace || '取得中...'}</div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">売上合計（税込・高速込）</label>
-                        <input type="number" id="inp-fare" class="w-full p-4 border rounded-2xl text-3xl font-bold text-center text-blue-700" inputmode="numeric">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-red-500 mb-1">高速代（売上から引かれます）</label>
-                        <input type="number" id="inp-hiway" class="w-full p-2 border rounded-xl text-xl font-bold text-center text-red-500" inputmode="numeric" placeholder="0">
-                    </div>
+                <div id="tag-container" class="flex flex-wrap gap-2 justify-center"></div>
+                <div id="fare-section" class="hidden space-y-4 pt-2">
+                    <div class="flex items-center justify-between"><label class="text-sm font-bold text-gray-600">売上合計（税込）</label><input type="number" id="inp-fare" class="w-32 p-2 border rounded-xl text-xl font-bold text-right text-blue-700 focus:outline-none" inputmode="numeric"></div>
+                    <div class="flex items-center justify-between"><label class="text-sm font-bold text-red-500">（うち高速代）</label><input type="number" id="inp-hiway" class="w-32 p-2 border rounded-xl text-lg font-bold text-right text-red-500 focus:outline-none" inputmode="numeric" placeholder="0"></div>
                 </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div id="f-dist"><label class="block text-xs font-bold text-gray-500 mb-1">営業距離(km)</label><input type="number" id="inp-dist" class="w-full p-3 border rounded-xl text-center font-bold" inputmode="decimal"></div>
-                    <div id="f-memo"><label class="block text-xs font-bold text-gray-500 mb-1">メモ</label><input type="text" id="inp-memo" class="w-full p-3 border rounded-xl text-sm"></div>
+                <button onclick="handleMainAction()" id="action-btn" class="btn-main bg-blue-600 text-white shadow-lg">お客様降車（清算へ）</button>
+                <div id="extra-fields" class="space-y-4">
+                    <div id="form-memo-area"><textarea id="inp-memo" class="w-full p-3 border border-gray-200 rounded-xl text-sm h-24 focus:outline-none" placeholder="メモを入力..."></textarea></div>
+                    <div id="form-dist-area" class="flex justify-between items-end border-b border-gray-100 pb-2"><span class="text-sm font-bold text-gray-500 pb-1">営業距離</span><div class="flex items-baseline"><input type="number" id="inp-dist" class="text-right text-2xl font-bold text-gray-800 w-32 focus:outline-none bg-transparent" inputmode="decimal" placeholder="0.0"><span class="text-lg font-bold text-gray-400 ml-1">km</span></div></div>
                 </div>
-
-                <button onclick="handleMainAction()" id="action-btn" class="btn-main bg-blue-600 text-white shadow-blue-200">次へ</button>
-                <button onclick="cancelInput()" class="w-full text-gray-400 text-xs py-2 underline">キャンセル</button>
+                <button onclick="cancelInput()" class="w-full text-gray-400 text-xs py-2 text-center underline">キャンセル</button>
             </div>
         </div>
-        <div id="current-logs" class="space-y-2 mt-4"></div>
+        <div id="main-current-logs" class="mt-4"></div>
     </div>
 
-    <div id="page-history" class="hidden">
-        <div class="p-2">
-            <h2 class="text-xl font-bold mb-4 border-l-4 border-blue-500 pl-3">勤務履歴</h2>
-            <div class="flex gap-2 mb-4">
-                <input type="text" id="hist-search" placeholder="検索..." class="flex-1 p-2 border rounded-xl text-sm" oninput="renderHistory()">
+    <div id="page-history" class="hidden"><h2 class="text-xl font-bold mb-4 border-l-4 border-blue-500 pl-3">勤務履歴</h2><div id="history-content" class="space-y-3"></div></div>
+    
+    <div id="page-share" class="hidden">
+        <div class="result-card">
+            <div class="flex justify-between items-start mb-4">
+                <div><p class="text-yellow-400 font-black tracking-widest text-lg">DAILY RESULT</p><p id="share-date-mode" class="text-[10px] text-gray-400 font-bold uppercase mt-0.5"></p></div>
+                <span class="text-2xl">🚕</span>
             </div>
-            <div id="history-content" class="space-y-3"></div>
+            <div class="text-center mb-4">
+                <p class="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mb-1">Net Sales (税抜営収)</p>
+                <div class="flex justify-center items-center"><span class="text-3xl font-black text-white mr-1">¥</span><span class="text-5xl font-black text-white leading-none tracking-tight" id="share-net">0</span></div>
+                <div class="flex justify-center gap-6 mt-4 text-[10px] font-bold text-gray-500 border-t border-white/5 pt-3">
+                    <div class="bg-white/5 px-3 py-1 rounded-full">COUNT: <span id="share-count" class="text-white text-xs">0</span></div>
+                    <div id="share-dist-box" class="bg-white/5 px-3 py-1 rounded-full text-white">KM: <span id="share-km" class="text-white text-xs">0.0</span></div>
+                </div>
+            </div>
+            <div>
+                <p class="text-[10px] text-yellow-500 font-black mb-2 uppercase text-center tracking-[0.4em]">🏆 営収 TOP 3</p>
+                <div id="share-top3" class="top3-box"></div>
+            </div>
+            <p class="text-center text-[8px] text-gray-600 mt-6 italic tracking-[0.2em]">RECORDED BY TAXI日報 PRO</p>
         </div>
-    </div>
-
-    <div id="page-share" class="hidden text-center p-6 bg-slate-900 min-height-[80vh] rounded-3xl text-white">
-        <h2 class="text-xl font-bold mb-8">✨ 本日の乗務リザルト ✨</h2>
-        <div class="bg-white/10 p-6 rounded-2xl mb-4 border border-white/20">
-            <p class="text-[10px] uppercase opacity-60">Net Sales</p>
-            <p class="text-4xl font-black text-yellow-400">¥<span id="share-net">0</span></p>
+        <div class="mt-8 px-2 text-center">
+            <p class="text-xl text-blue-700 font-black mb-4 italic drop-shadow-sm">📸 この画面をスクショして保存！</p>
+            <button onclick="executeFinish()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl text-lg mb-4">この内容で勤務終了を確定</button>
+            <button onclick="switchPage('main')" class="w-full text-slate-400 text-xs py-2 underline">乗務画面に戻る</button>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white/10 p-4 rounded-2xl border border-white/20"><p class="text-[10px] opacity-60">COUNT</p><p class="text-2xl font-bold" id="share-count">0</p></div>
-            <div class="bg-white/10 p-4 rounded-2xl border border-white/20"><p class="text-[10px] opacity-60">DISTANCE</p><p class="text-2xl font-bold" id="share-km">0.0</p></div>
-        </div>
-        <p class="mt-12 text-[10px] opacity-40 italic font-serif">TAXI 日報 PRO - 2025</p>
     </div>
 
     <nav class="bottom-nav">
@@ -130,224 +127,174 @@
     </div>
 
     <script>
-        const DB_KEY = 'taxi_final_db_2025';
-        const SET_KEY = 'taxi_final_settings_2025';
-
-        let state = {
-            status: 'OFF', // OFF, WAITING, RIDING, FINISHING
-            currentShift: null,
-            shifts: [],
-            tempRide: { type: '一般', tags: [], startPlace: '', endPlace: '' },
-            settings: { mode: '隔日勤務', showMemo: true, showDist: true, closing: 19 }
-        };
+        const DB_KEY = 'TAXI_PRO_FIXED_STORAGE_V1';
+        const SET_KEY = 'TAXI_PRO_SETTINGS_FIXED';
+        const TAG_LIST = ['病院', '駅', 'ホテル', '空港', '万収', '指名'];
+        let state = { status: 'OFF', currentShift: null, shifts: [], editingIndex: -1, tempRide: { type: '一般', tags: [], startPlace: '', endPlace: '', memo: '' }, settings: { mode: '隔日勤務', showMemo: true, showDist: true, closingDay: 19 } };
 
         window.onload = () => {
             const d = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-            state.shifts = d.shifts || [];
-            state.currentShift = d.currentShift || null;
-            state.status = d.status || 'OFF';
+            state.shifts = d.shifts || []; state.currentShift = d.currentShift || null; state.status = d.status || 'OFF';
             state.settings = JSON.parse(localStorage.getItem(SET_KEY) || JSON.stringify(state.settings));
-            
-            startClock();
-            render();
+            applyDisplaySettings(); startClock(); render();
         };
 
-        function startClock() {
-            const el = document.getElementById('clock');
-            const update = () => {
-                const n = new Date();
-                el.innerText = n.toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' });
-            };
-            update(); setInterval(update, 1000);
+        function applyDisplaySettings() {
+            const m = document.getElementById('form-memo-area'), d = document.getElementById('form-dist-area');
+            if(m) m.style.display = state.settings.showMemo ? 'block' : 'none';
+            if(d) d.style.display = state.settings.showDist ? 'flex' : 'none';
         }
+
+        function startClock() { const el = document.getElementById('clock'); const u = () => { if(el) el.innerText = new Date().toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }; u(); setInterval(u, 1000); }
+        function setType(t) { state.tempRide.type = t; ['一般', '無線', '付待'].forEach(type => { const b = document.getElementById(`type-${type}`); if (b) b.className = `type-btn ${t === type ? 'active' : ''}`; }); }
 
         async function getGPS() {
             return new Promise(r => {
-                if(!navigator.geolocation) return r("GPS不可");
+                if(!navigator.geolocation) return r("地点不明");
                 navigator.geolocation.getCurrentPosition(async p => {
                     try {
                         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.coords.latitude}&lon=${p.coords.longitude}&accept-language=ja`);
-                        const j = await res.json();
-                        r(j.address.suburb || j.address.city_district || j.address.city || "地点取得完了");
+                        const j = await res.json(); const a = j.address;
+                        const city = a.city || a.town || a.village || ""; const sub = a.suburb || a.city_district || a.neighbourhood || "";
+                        r((city + sub) || "取得地点");
                     } catch { r("取得エラー"); }
-                }, () => r("GPS信号なし"));
+                }, () => r("GPS信号なし"), { enableHighAccuracy: true });
             });
         }
 
         function render() {
-            const ctrl = document.getElementById('main-controls');
-            const form = document.getElementById('input-form');
-            const fareSec = document.getElementById('fare-section');
-            const btn = document.getElementById('action-btn');
-            const title = document.getElementById('form-title');
-            
+            const ctrl = document.getElementById('main-controls'), form = document.getElementById('input-form'), fareSec = document.getElementById('fare-section'), typeBox = document.getElementById('type-selector-container'), endBtnBox = document.getElementById('end-shift-container'), routeBox = document.getElementById('route-display-area');
+            if(!ctrl) return;
             ctrl.innerHTML = '';
-            
             if(state.status === 'OFF') {
                 ctrl.innerHTML = `<button onclick="startShift()" class="btn-main bg-emerald-600 text-white shadow-emerald-100">勤務開始（出庫）</button>`;
-                form.classList.add('hidden');
-            } else if(state.status === 'WAITING') {
-                ctrl.innerHTML = `
-                    <div class="grid grid-cols-3 gap-2 mb-4">
-                        <button onclick="setType('一般')" class="type-btn ${state.tempRide.type==='一般'?'active':''}">🚕 一般</button>
-                        <button onclick="setType('無線')" class="type-btn ${state.tempRide.type==='無線'?'active':''}">📡 無線</button>
-                        <button onclick="setType('付待')" class="type-btn ${state.tempRide.type==='付待'?'active':''}">🚉 付待</button>
-                    </div>
-                    <button onclick="startRide()" class="btn-main bg-blue-600 text-white shadow-blue-100">乗車開始</button>
-                    <button onclick="confirmEnd()" class="w-full text-red-500 font-bold py-4 text-sm underline text-center">勤務終了（帰庫）</button>
-                `;
-                form.classList.add('hidden');
-            } else if(state.status === 'RIDING') {
-                form.classList.remove('hidden');
-                fareSec.classList.add('hidden');
-                title.innerText = `実車中 [${state.tempRide.type}]`;
-                btn.innerText = "お客様降車（清算へ）";
-                ctrl.innerHTML = `<div class="p-2 text-red-500 font-bold animate-pulse text-center">賃走中...</div>`;
-            } else if(state.status === 'FINISHING') {
-                form.classList.remove('hidden');
-                fareSec.classList.remove('hidden');
-                title.innerText = "清算入力";
-                btn.innerText = "記録を保存する";
+                form.classList.add('hidden'); typeBox.classList.add('hidden'); endBtnBox.classList.add('hidden');
+            } else {
+                typeBox.classList.remove('hidden'); setType(state.tempRide.type);
+                if(state.status === 'WAITING') {
+                    ctrl.innerHTML = `<button onclick="startRide()" class="btn-main bg-blue-600 text-white shadow-blue-100">乗車開始</button>`;
+                    form.classList.add('hidden'); endBtnBox.classList.remove('hidden'); routeBox.classList.add('hidden');
+                } else if(state.status === 'RIDING') {
+                    form.classList.remove('hidden'); fareSec.classList.add('hidden'); routeBox.classList.add('hidden');
+                    document.getElementById('form-title').innerText = `実車詳細 [${state.tempRide.type}]`;
+                    document.getElementById('action-btn').innerText = "お客様降車（清算へ）";
+                    ctrl.innerHTML = `<div class="p-2 text-red-500 font-bold animate-pulse text-center">賃走中...</div>`;
+                    endBtnBox.classList.add('hidden'); renderTags();
+                } else if(state.status === 'FINISHING') {
+                    form.classList.remove('hidden'); fareSec.classList.remove('hidden'); routeBox.classList.remove('hidden');
+                    document.getElementById('form-title').innerText = "清算入力";
+                    document.getElementById('start-p-display').innerText = state.tempRide.startPlace;
+                    document.getElementById('end-p-display').innerText = state.tempRide.endPlace || "取得中...";
+                    document.getElementById('action-btn').innerText = "記録を保存";
+                    renderTags();
+                }
             }
-
-            updateDash();
-            renderCurrentLogs();
-            save();
+            updateDash(); renderCurrentLogs(); save();
         }
 
-        function setType(t) { state.tempRide.type = t; render(); }
-        
+        function renderTags() {
+            const container = document.getElementById('tag-container');
+            if(!container) return;
+            container.innerHTML = TAG_LIST.map(tag => `<input type="checkbox" id="tag-${tag}" class="tag-checkbox" onchange="toggleTag('${tag}')" ${state.tempRide.tags.includes(tag)?'checked':''}><label for="tag-${tag}" class="tag-label">${tag}</label>`).join('');
+        }
+
+        function toggleTag(t) { if(state.tempRide.tags.includes(t)) state.tempRide.tags = state.tempRide.tags.filter(x=>x !== t); else state.tempRide.tags.push(t); }
+
         async function startRide() {
-            state.status = 'RIDING';
-            state.tempRide = { ...state.tempRide, tags: [], startPlace: '取得中...', endPlace: '' };
-            render();
-            state.tempRide.startPlace = await getGPS();
-            render();
+            state.status = 'RIDING'; state.editingIndex = -1;
+            state.tempRide = { type: state.tempRide.type, tags: [], startPlace: '取得中...', endPlace: '', memo: '' };
+            resetInputs(); render();
+            state.tempRide.startPlace = await getGPS(); render();
         }
 
         async function handleMainAction() {
             if(state.status === 'RIDING') {
-                state.status = 'FINISHING';
-                render();
-                state.tempRide.endPlace = await getGPS();
-                render();
+                state.tempRide.memo = document.getElementById('inp-memo').value;
+                state.status = 'FINISHING'; render(); state.tempRide.endPlace = await getGPS(); render();
             } else {
-                const f = parseInt(document.getElementById('inp-fare').value) || 0;
-                const h = parseInt(document.getElementById('inp-hiway').value) || 0;
-                state.currentShift.rides.push({
-                    ...state.tempRide,
-                    fare: f - h, hiway: h,
-                    dist: parseFloat(document.getElementById('inp-dist').value) || 0,
-                    memo: document.getElementById('inp-memo').value,
-                    time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})
-                });
-                state.status = 'WAITING';
-                state.tempRide = { type: '一般', tags: [] };
-                render();
+                const f = parseInt(document.getElementById('inp-fare').value) || 0, h = parseInt(document.getElementById('inp-hiway').value) || 0;
+                const d = { ...state.tempRide, fare: f - h, hiway: h, dist: parseFloat(document.getElementById('inp-dist').value) || 0, memo: document.getElementById('inp-memo').value, time: state.editingIndex > -1 ? state.currentShift.rides[state.editingIndex].time : new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) };
+                if(state.editingIndex > -1) state.currentShift.rides[state.editingIndex] = d; else state.currentShift.rides.push(d);
+                state.status = 'WAITING'; state.editingIndex = -1; state.tempRide.type = '一般';
+                resetInputs(); render();
             }
         }
 
-        function toggleTag(t) {
-            if(state.tempRide.tags.includes(t)) state.tempRide.tags = state.tempRide.tags.filter(x=>x!==t);
-            else state.tempRide.tags.push(t);
-        }
+        function resetInputs() { document.querySelectorAll('#inp-fare, #inp-hiway, #inp-dist, #inp-memo').forEach(el => el.value = ''); }
 
         function updateDash() {
             const a = state.currentShift || { rides: [] };
-            const s = a.rides.reduce((v, r) => v + Number(r.fare), 0);
-            document.getElementById('dash-count').innerText = a.rides.length;
-            document.getElementById('dash-sales').innerText = s.toLocaleString();
-            document.getElementById('dash-net').innerText = Math.floor(s/1.1).toLocaleString();
-            document.getElementById('dash-km').innerText = a.rides.reduce((v, r) => v + Number(r.dist), 0).toFixed(1);
+            const tf = a.rides.reduce((v, r) => v + Number(r.fare), 0), ts = a.rides.reduce((v, r) => v + (Number(r.fare) + Number(r.hiway)), 0);
+            document.getElementById('dash-count').innerText = a.rides.length; document.getElementById('dash-sales').innerText = ts.toLocaleString();
+            document.getElementById('dash-net').innerText = Math.floor(tf / 1.1).toLocaleString(); document.getElementById('dash-km').innerText = a.rides.reduce((v, r) => v + Number(r.dist), 0).toFixed(1);
         }
 
         function renderCurrentLogs() {
-            const el = document.getElementById('current-logs');
-            if(state.status === 'OFF') return el.innerHTML = '';
-            el.innerHTML = `<h3 class="text-[10px] text-gray-400 text-center uppercase tracking-widest mb-2">Today's Logs</h3>`;
+            const el = document.getElementById('main-current-logs'); if(!el || state.status === 'OFF') { if(el) el.innerHTML = ''; return; }
+            el.innerHTML = `<h3 class="text-[10px] text-gray-400 text-center uppercase tracking-widest mb-2 mt-4">Current Logs</h3>`;
             [...state.currentShift.rides].reverse().forEach((r, i) => {
-                el.innerHTML += `<div class="bg-white p-3 rounded-xl border mb-2 flex justify-between items-center text-sm shadow-sm">
-                    <div><b>${r.time}</b> ¥${Number(r.fare).toLocaleString()} [${r.type}]<br><span class="text-[9px] text-gray-400">${r.startPlace} ⮕ ${r.endPlace}</span></div>
-                    <button onclick="deleteRide(${state.currentShift.rides.length-1-i})" class="text-red-400 text-[10px] font-bold">削除</button>
-                </div>`;
+                const idx = state.currentShift.rides.length - 1 - i;
+                el.innerHTML += `<div class="bg-white p-3 rounded-xl border mb-2 flex justify-between items-center text-sm shadow-sm"><div><b>${r.time}</b> ¥${(r.fare + r.hiway).toLocaleString()} [${r.type}]<br><span class="text-[9px] text-gray-400">${r.endPlace}</span></div><div class="flex gap-2"><button onclick="editRide(${idx})" class="text-blue-500 text-[10px] font-bold">編集</button><button onclick="deleteRide(${idx})" class="text-red-400 text-[10px] font-bold">削除</button></div></div>`;
             });
         }
 
+        function editRide(idx) { const r = state.currentShift.rides[idx]; state.editingIndex = idx; state.tempRide = { ...r }; state.status = 'FINISHING'; render(); document.getElementById('inp-fare').value = r.fare + r.hiway; document.getElementById('inp-hiway').value = r.hiway; document.getElementById('inp-dist').value = r.dist; document.getElementById('inp-memo').value = r.memo; }
         function startShift() { state.currentShift = { date: new Date().toLocaleDateString('ja-JP'), rides: [] }; state.status = 'WAITING'; render(); }
-        function cancelInput() { if(confirm("入力を破棄しますか？")) { state.status = 'WAITING'; render(); } }
-        function deleteRide(idx) { if(confirm("削除しますか？")) { state.currentShift.rides.splice(idx, 1); render(); } }
         
-        function confirmEnd() {
+        function executeFinish() {
+            if(!state.currentShift) return;
+            state.shifts.push(state.currentShift);
+            state.currentShift = null;
+            state.status = 'OFF';
+            save();
             openModal(`
                 <div class="p-8 text-center">
-                    <p class="font-bold text-lg mb-6 text-gray-800">本日の乗務を終了し、<br>日報を保存しますか？</p>
-                    <div class="flex gap-2">
-                        <button onclick="closeModal()" class="flex-1 py-4 rounded-2xl bg-gray-100 font-bold text-gray-500">戻る</button>
-                        <button onclick="finishShift()" class="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold">終了</button>
-                    </div>
+                    <div class="text-6xl mb-4">🏆</div>
+                    <p class="font-black text-xl mb-2 text-gray-800">帰庫完了！</p>
+                    <p class="text-gray-500 text-sm mb-8 leading-relaxed">本日の勤務データを<br>正常に保存しました。</p>
+                    <button onclick="closeModal(); switchPage('main');" class="w-full py-4 rounded-2xl bg-blue-600 text-white font-black shadow-lg">お疲れ様でした！</button>
                 </div>
             `);
         }
 
-        function finishShift() {
-            state.shifts.push(state.currentShift);
-            state.currentShift = null; state.status = 'OFF';
-            closeModal(); render();
-        }
-
-        function switchPage(p) {
-            ['main','history','share'].forEach(id => {
-                document.getElementById('page-'+id).classList.toggle('hidden', id !== p);
-                document.getElementById('nav-'+id).classList.toggle('active', id === p);
-            });
-            if(p === 'history') renderHistory();
-            if(p === 'share') renderShare();
-        }
-
-        function renderHistory() {
-            const el = document.getElementById('history-content');
-            const q = document.getElementById('hist-search').value;
-            el.innerHTML = '';
-            [...state.shifts].reverse().forEach(s => {
-                const total = s.rides.reduce((v, r) => v + Number(r.fare), 0);
-                if(q && !s.date.includes(q) && !JSON.stringify(s.rides).includes(q)) return;
-                el.innerHTML += `<div class="card p-4"><div class="flex justify-between font-bold text-sm"><span>${s.date}</span><span class="text-blue-600">¥${total.toLocaleString()}</span></div><div class="text-[9px] text-gray-400 mt-2">${s.rides.map(r=>`${r.time} ¥${r.fare}`).join(' / ')}</div></div>`;
-            });
-        }
+        function switchPage(p) { ['main','history','share'].forEach(id => { document.getElementById('page-'+id).classList.toggle('hidden', id !== p); document.getElementById('nav-'+id).classList.toggle('active', id === p); }); if(p === 'history') renderHistory(); if(p === 'share') renderShare(); }
+        function renderHistory() { const el = document.getElementById('history-content'); if(!el) return; el.innerHTML = ''; const all = state.currentShift ? [{...state.currentShift, isCurrent:true}, ...state.shifts] : state.shifts; all.forEach((s, idx) => { const tn = Math.floor(s.rides.reduce((v, r) => v + Number(r.fare), 0) / 1.1); el.innerHTML += `<div class="card p-0 overflow-hidden shadow-sm"><div class="p-4 bg-white flex justify-between font-bold" onclick="toggleHist(${idx})"><span>${s.date} ${s.rides.length}件</span><span class="text-blue-600">¥${tn.toLocaleString()}</span></div><div id="hist-det-${idx}" class="hist-detail p-4 border-t bg-gray-50">${s.rides.map(r=>`<div class="py-2 border-b last:border-0 border-gray-200"><div class="flex justify-between font-bold text-[11px] mb-0.5"><span>${r.time} [${r.type}] ${r.endPlace}</span><span>¥${(r.fare+r.hiway).toLocaleString()}</span></div></div>`).join('')}</div></div>`; }); }
+        function toggleHist(idx) { document.getElementById(`hist-det-${idx}`).classList.toggle('open'); }
 
         function renderShare() {
-            const a = state.currentShift || { rides: [] };
-            const s = a.rides.reduce((v, r) => v + Number(r.fare), 0);
-            document.getElementById('share-net').innerText = Math.floor(s/1.1).toLocaleString();
+            const shareNet = document.getElementById('share-net');
+            if(!shareNet) return;
+            if(!state.currentShift) { document.getElementById('share-top3').innerHTML = '<p class="text-center text-gray-500 text-[10px] py-4 uppercase tracking-widest">No Active Data</p>'; return; }
+            const a = state.currentShift;
+            const tf = a.rides.reduce((v, r) => v + Number(r.fare), 0);
+            const ts = a.rides.reduce((v, r) => v + (Number(r.fare) + Number(r.hiway)), 0);
+            const km = a.rides.reduce((v, r) => v + Number(r.dist), 0);
+            document.getElementById('share-date-mode').innerText = `${a.date} / ${state.settings.mode}`;
+            shareNet.innerText = Math.floor(tf / 1.1).toLocaleString();
             document.getElementById('share-count').innerText = a.rides.length;
-            document.getElementById('share-km').innerText = a.rides.reduce((v, r) => v + Number(r.dist), 0).toFixed(1);
-        }
+            document.getElementById('share-km').innerText = km.toFixed(1);
+            document.getElementById('share-dist-box').style.display = state.settings.showDist ? 'block' : 'none';
 
-        function openSettings() {
-            openModal(`
-                <div class="p-6">
-                    <h2 class="font-bold text-center mb-6">アプリ設定</h2>
-                    <div class="space-y-4">
-                        <label class="block text-xs text-gray-400">勤務形態</label>
-                        <select id="s-mode" class="w-full p-3 border rounded-xl">${['日勤','夜勤','隔日勤務'].map(m=>`<option ${state.settings.mode===m?'selected':''}>${m}</option>`).join('')}</select>
-                        <div class="flex justify-between items-center py-2 border-b"><span class="text-sm">メモ欄を表示</span><input type="checkbox" id="s-memo" ${state.settings.showMemo?'checked':''}></div>
-                        <div class="flex justify-between items-center py-2 border-b"><span class="text-sm">営業距離を表示</span><input type="checkbox" id="s-dist" ${state.settings.showDist?'checked':''}></div>
-                        <button onclick="saveSet()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold mt-4 shadow-lg">設定を保存</button>
-                        <button onclick="clearSys()" class="w-full text-red-400 text-[10px] mt-4">全データリセット</button>
-                    </div>
+            const sorted = [...a.rides].sort((x, y) => Number(y.fare) - Number(x.fare));
+            const top3 = sorted.slice(0, 3);
+            const icons = ['🥇','🥈','🥉'];
+            document.getElementById('share-top3').innerHTML = top3.map((r, i) => `
+                <div class="top3-item">
+                    <div class="flex justify-between items-center"><span class="text-3xl">${icons[i]}</span><span class="text-2xl font-black text-white">¥${Math.floor(Number(r.fare)/1.1).toLocaleString()}</span></div>
+                    <div class="text-right mt-1"><span class="text-[10px] font-bold text-gray-400 truncate inline-block max-w-[180px]">${r.endPlace || '不明'}</span></div>
                 </div>
-            `);
-        }
-        function saveSet() {
-            state.settings = { mode: document.getElementById('s-mode').value, showMemo: document.getElementById('s-memo').checked, showDist: document.getElementById('s-dist').checked };
-            localStorage.setItem(SET_KEY, JSON.stringify(state.settings));
-            closeModal(); render();
+            `).join('') || '<p class="text-center text-gray-500 text-[10px] py-4 uppercase">No Data Recorded</p>';
         }
 
-        function openModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('modal-container').classList.remove('hidden'); }
+        function openSettings() { document.getElementById('modal-content').innerHTML = `<div class="p-6"><h2 class="font-bold text-center text-lg mb-6 text-gray-800">アプリ設定</h2><div class="space-y-5"><div><label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">勤務形態</label><select id="s-mode" class="w-full p-3 bg-gray-50 border-none rounded-2xl font-bold">${['日勤', '夜勤', '隔日勤務'].map(m => `<option ${state.settings.mode === m ? 'selected' : ''}>${m}</option>`).join('')}</select></div><div><label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">給与締め日</label><input type="number" id="s-closing" value="${state.settings.closingDay}" class="w-full p-3 bg-gray-50 border-none rounded-2xl font-bold text-center"></div><div class="flex justify-between items-center py-2"><span class="text-sm font-bold text-gray-700">メモ欄を表示</span><label class="flex items-center"><input type="checkbox" id="s-memo" class="hidden" ${state.settings.showMemo ? 'checked' : ''}><div class="toggle-switch"></div></label></div><div class="flex justify-between items-center py-2"><span class="text-sm font-bold text-gray-700">営業距離を表示</span><label class="flex items-center"><input type="checkbox" id="s-dist" class="hidden" ${state.settings.showDist ? 'checked' : ''}><div class="toggle-switch"></div></label></div><button onclick="exportCSV()" class="w-full bg-emerald-500 text-white py-3 rounded-2xl font-bold mb-2 shadow-sm">CSV保存</button><button onclick="saveSet()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">設定を保存</button><button onclick="clearSys()" class="w-full text-red-500 text-[10px] mt-4 font-bold text-center w-full block underline">すべてのデータを削除してリセット</button><button onclick="closeModal()" class="w-full text-gray-400 text-xs mt-2 text-center underline">閉じる</button></div></div>`; document.getElementById('modal-container').classList.remove('hidden'); }
+        function saveSet() { state.settings = { mode: document.getElementById('s-mode').value, closingDay: parseInt(document.getElementById('s-closing').value) || 19, showMemo: document.getElementById('s-memo').checked, showDist: document.getElementById('s-dist').checked }; localStorage.setItem(SET_KEY, JSON.stringify(state.settings)); applyDisplaySettings(); closeModal(); render(); }
+        function exportCSV() { let c = "日付,時刻,区分,税込,高速,税抜,距離,実車,降車,メモ\n"; state.shifts.forEach(s => { s.rides.forEach(r => { c += `${s.date},${r.time},${r.type},${r.fare+r.hiway},${r.hiway},${Math.floor(r.fare/1.1)},${r.dist},${r.startPlace},${r.endPlace},${r.memo}\n`; }); }); const b = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), c], { type: 'text/csv' }); const l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = "taxi_history.csv"; l.click(); }
+        function openModal(h) { document.getElementById('modal-content').innerHTML = h; document.getElementById('modal-container').classList.remove('hidden'); }
         function closeModal() { document.getElementById('modal-container').classList.add('hidden'); }
         function save() { localStorage.setItem(DB_KEY, JSON.stringify({ shifts: state.shifts, currentShift: state.currentShift, status: state.status })); }
-        function clearSys() { if(confirm("リセットしますか？")) { localStorage.clear(); location.reload(); } }
+        function deleteRide(idx) { if(confirm("削除しますか？")) { state.currentShift.rides.splice(idx, 1); render(); } }
+        function cancelInput() { if(confirm("破棄しますか？")) { state.status = 'WAITING'; state.editingIndex = -1; resetInputs(); render(); } }
+        function clearSys() { if(confirm("【警告】過去の履歴を含め、すべてのデータが消去されます。よろしいですか？")) { localStorage.clear(); location.reload(); } }
     </script>
 </body>
 </html>
