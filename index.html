@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAXI日報 Ver 3.1</title>
+    <title>TAXI日報 Ver 3.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: sans-serif; background-color: #f0f2f5; padding-bottom: 60px; }
@@ -18,8 +18,10 @@
         .history-detail { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
         .history-detail.open { display: block; }
 
-        /* ステータスカードの調整 */
-        .status-cell { border-right: 1px solid #4a5568; last-child: border-none; }
+        /* レイアウト幅の調整: 合計 100% */
+        .w-count { width: 15%; border-right: 1px solid #4a5568; } /* 件数: 狭く */
+        .w-sales { width: 55%; border-right: 1px solid #4a5568; } /* 売上: 広く */
+        .w-dist  { width: 30%; } /* 距離: 中間 */
     </style>
 </head>
 <body class="max-w-md mx-auto p-4">
@@ -41,7 +43,6 @@
 
     <div id="input-form" class="hidden card bg-blue-50 border-t-4 border-blue-500">
         <h2 id="form-title" class="text-lg font-bold mb-3 text-blue-800">実車中</h2>
-        
         <div class="space-y-4">
             <div id="fare-input-section" class="hidden">
                 <div class="mb-4">
@@ -49,12 +50,11 @@
                     <div class="grid grid-cols-4 gap-1 mb-2">
                         <button type="button" onclick="addValue('fare', 1000)" class="num-pad-btn bg-orange-50">+1000</button>
                         <button type="button" onclick="addValue('fare', 100)" class="num-pad-btn bg-blue-50">+100</button>
-                        <button type="button" onclick="addValue('fare', 10)" class="num-pad-btn bg-emerald-50">+10</button>
+                        <button type="button" onclick="addFareLow(10)" class="num-pad-btn bg-emerald-50">+10</button>
                         <button type="button" onclick="clearValue('fare')" class="num-pad-btn bg-gray-100 text-red-500">消</button>
                     </div>
                     <input type="number" id="fare" class="w-full p-3 border rounded-lg text-2xl font-bold text-center text-blue-700" inputmode="numeric" placeholder="0">
                 </div>
-
                 <div class="mb-4">
                     <label class="block text-sm font-bold text-red-700 mb-1">高速代（売上から引かれます）</label>
                     <div class="grid grid-cols-4 gap-1 mb-2">
@@ -66,7 +66,6 @@
                     <input type="number" id="hiway" class="w-full p-2 border rounded-lg text-xl font-bold text-center text-red-600" inputmode="numeric" placeholder="0">
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm text-gray-600 font-bold mb-1">営業距離 (km)</label>
@@ -77,34 +76,32 @@
                     <input type="text" id="memo" class="w-full p-3 border rounded text-lg" placeholder="高速, 迎車など">
                 </div>
             </div>
-            
             <button onclick="saveRide()" id="save-btn" class="btn-main bg-blue-600 text-white">お客様降車（清算へ）</button>
-            <button onclick="cancelInput()" id="back-btn" class="w-full text-gray-400 py-2 text-sm text-center underline">キャンセルして戻る</button>
+            <button onclick="cancelInput()" id="back-btn" class="w-full text-gray-400 py-2 text-sm text-center underline">キャンセル</button>
         </div>
     </div>
 
     <div id="current-status-card" class="card bg-gray-800 text-white p-0 overflow-hidden">
-        <div class="grid grid-cols-3 text-center">
-            <div class="py-4 status-cell">
-                <div class="text-[10px] text-gray-400 mb-1">乗車件数</div>
-                <div class="text-2xl font-bold" id="cur-count">0</div>
-                <div class="text-[10px] text-gray-500">回</div>
+        <div class="flex text-center items-center">
+            <div class="py-4 w-count">
+                <div class="text-[9px] text-gray-400 mb-1">回数</div>
+                <div class="text-xl font-bold" id="cur-count">0</div>
             </div>
-            <div class="py-4 status-cell bg-gray-700">
-                <div class="text-[10px] text-gray-300 mb-1">売上合計(税込)</div>
+            <div class="py-4 w-sales bg-gray-700">
+                <div class="text-[9px] text-gray-300 mb-1">売上合計(税込)</div>
                 <div class="text-2xl font-bold text-yellow-400" id="cur-sales">0</div>
-                <div class="text-[10px] text-emerald-400 font-bold">税抜: <span id="cur-tax-free">0</span></div>
+                <div class="text-[9px] text-emerald-400 font-bold">税抜: <span id="cur-tax-free">0</span></div>
             </div>
-            <div class="py-4">
-                <div class="text-[10px] text-gray-400 mb-1">営業距離</div>
-                <div class="text-2xl font-bold" id="cur-km">0.0</div>
-                <div class="text-[10px] text-gray-500">km</div>
+            <div class="py-4 w-dist">
+                <div class="text-[9px] text-gray-400 mb-1">営業距離</div>
+                <div class="text-xl font-bold" id="cur-km">0.0</div>
+                <div class="text-[9px] text-gray-500">km</div>
             </div>
         </div>
     </div>
 
     <div id="current-ride-list-area" class="hidden mb-6">
-        <h3 class="text-xs font-bold mb-2 text-gray-400 text-center tracking-widest uppercase">Today's Logs</h3>
+        <h3 class="text-xs font-bold mb-2 text-gray-400 text-center tracking-widest">TODAY'S LOGS</h3>
         <div id="current-ride-list" class="space-y-2"></div>
     </div>
 
@@ -114,9 +111,9 @@
     </div>
 
     <script>
-        const S_KEY = 'taxi_v31_shifts';
-        const C_KEY = 'taxi_v31_current';
-        const ST_KEY = 'taxi_v31_status';
+        const S_KEY = 'taxi_v32_shifts';
+        const C_KEY = 'taxi_v32_current';
+        const ST_KEY = 'taxi_v32_status';
 
         let shifts = JSON.parse(localStorage.getItem(S_KEY) || '[]');
         let currentShift = JSON.parse(localStorage.getItem(C_KEY) || 'null');
@@ -139,6 +136,7 @@
         }
 
         function addValue(id, num) { const el = document.getElementById(id); el.value = (parseInt(el.value) || 0) + num; }
+        function addFareLow(num) { addValue('fare', num); }
         function clearValue(id) { document.getElementById(id).value = ''; }
 
         function render() {
@@ -146,7 +144,6 @@
             const form = document.getElementById('input-form');
             const fareSec = document.getElementById('fare-input-section');
             const rideArea = document.getElementById('current-ride-list-area');
-            
             ctrls.innerHTML = '';
             
             if (status === 'OFF') {
@@ -168,7 +165,7 @@
                 fareSec.classList.add('hidden');
                 document.getElementById('form-title').innerText = `実車中 [${selectedType}]`;
                 document.getElementById('save-btn').innerText = "お客様降車（清算へ）";
-                ctrls.innerHTML = `<div class="p-2 text-red-500 font-bold animate-pulse text-center text-xl tracking-widest">実車中</div>`;
+                ctrls.innerHTML = `<div class="p-2 text-red-500 font-bold animate-pulse text-center text-xl">実車中</div>`;
             }
 
             const active = currentShift || { rides: [] };
@@ -210,23 +207,15 @@
             }
             const f = parseInt(document.getElementById('fare').value) || 0;
             const h = parseInt(document.getElementById('hiway').value) || 0;
-            
-            const data = { 
-                time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}), 
-                fare: f - h, // 高速代を引いた純粋な売上
-                hiway: h,
-                distance: document.getElementById('distance').value || 0, 
-                memo: document.getElementById('memo').value, 
-                type: selectedType 
-            };
+            const data = { time: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}), fare: f - h, hiway: h, distance: document.getElementById('distance').value || 0, memo: document.getElementById('memo').value, type: selectedType };
             currentShift.rides.push(data);
             status = 'WAITING';
             render();
         }
 
-        function deleteRide(idx) { if(confirm('この記録を削除しますか？')) { currentShift.rides.splice(idx, 1); render(); } }
-        function cancelInput() { if(confirm('入力を破棄しますか？')) { status = 'WAITING'; render(); } }
-        function endShift() { if(confirm('本日の業務を終了しますか？')) { currentShift.endTime = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}); shifts.push(currentShift); currentShift = null; status = 'OFF'; render(); } }
+        function deleteRide(idx) { if(confirm('削除しますか？')) { currentShift.rides.splice(idx, 1); render(); } }
+        function cancelInput() { if(confirm('破棄しますか？')) { status = 'WAITING'; render(); } }
+        function endShift() { if(confirm('終了しますか？')) { currentShift.endTime = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}); shifts.push(currentShift); currentShift = null; status = 'OFF'; render(); } }
         
         function renderHistory() {
             const list = document.getElementById('shift-history');
@@ -243,7 +232,7 @@
         function toggleDetail(id) { document.getElementById(`detail-${id}`).classList.toggle('open'); }
         function saveToStorage() { localStorage.setItem(S_KEY, JSON.stringify(shifts)); localStorage.setItem(C_KEY, JSON.stringify(currentShift)); localStorage.setItem(ST_KEY, status); }
         function toggleSettings() { document.getElementById('settings-panel').classList.toggle('hidden'); }
-        function clearSystem() { if(confirm('全消去しますか？')) { localStorage.clear(); location.reload(); } }
+        function clearSystem() { if(confirm('リセットしますか？')) { localStorage.clear(); location.reload(); } }
     </script>
 </body>
 </html>
