@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TAXI日報 PRO Ver 7.1</title>
+    <title>TAXI日報 PRO Ver 7.4</title>
 
     <meta property="og:title" content="TAXI日報 PRO">
     <meta property="og:description" content="現役乗務員のための営収管理アプリ。地点自動取得、リザルトシェア機能を搭載。">
@@ -168,10 +168,17 @@
             } catch(e) { console.error(e); }
         };
 
+        // 税抜を10円単位で切り上げる関数
+        function getNet(val) {
+            if (!val || val <= 0) return 0;
+            const taxEx = val / 1.1; 
+            return Math.ceil(taxEx / 10) * 10;
+        }
+
         function applyDisplaySettings() {
             const m = document.getElementById('form-memo-area'), d = document.getElementById('form-dist-area');
-            if(m) m.classList.toggle('hidden', !state.settings.showMemo);
-            if(d) d.classList.toggle('hidden', !state.settings.showDist);
+            if(m) { if(state.settings.showMemo) m.classList.remove('hidden'); else m.classList.add('hidden'); }
+            if(d) { if(state.settings.showDist) d.classList.remove('hidden'); else d.classList.add('hidden'); }
         }
 
         function startClock() { const el = document.getElementById('clock'); const u = () => { if(el) el.innerText = new Date().toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }; u(); setInterval(u, 1000); }
@@ -183,7 +190,7 @@
                 navigator.geolocation.getCurrentPosition(async p => {
                     try {
                         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${p.coords.latitude}&lon=${p.coords.longitude}&accept-language=ja`);
-                        const j = await res.json(); r((j.address.city || j.address.town || j.address.suburb || "") || "取得地点");
+                        const j = await res.json(); r((j.address.city || j.address.town || j.address.suburb || j.address.city_district || "") || "取得地点");
                     } catch { r("取得エラー"); }
                 }, () => r("GPSなし"), { enableHighAccuracy: true });
             });
@@ -254,7 +261,7 @@
             const km = a.rides.reduce((v, r) => v + (parseFloat(r.dist) || 0), 0);
             document.getElementById('dash-count').innerText = a.rides.length;
             document.getElementById('dash-sales').innerText = ts.toLocaleString();
-            document.getElementById('dash-net').innerText = Math.floor(tf / 1.1).toLocaleString();
+            document.getElementById('dash-net').innerText = getNet(tf).toLocaleString();
             document.getElementById('dash-km').innerText = km.toFixed(1);
         }
 
@@ -291,23 +298,26 @@
                 start = new Date(now.getFullYear(), now.getMonth() - 1, closingDay + 1);
                 end = new Date(now.getFullYear(), now.getMonth(), closingDay);
             }
-            let net = 0, gross = 0;
+            let netTotal = 0, grossTotal = 0;
             const allShifts = state.currentShift ? [state.currentShift, ...state.shifts] : state.shifts;
             allShifts.forEach(s => {
                 const sDate = new Date(s.date);
                 if (sDate >= start && sDate <= end) {
                     s.rides.forEach(r => {
-                        net += (parseInt(r.fare) || 0);
-                        gross += ((parseInt(r.fare) || 0) + (parseInt(r.hiway) || 0));
+                        netTotal += (parseInt(r.fare) || 0);
+                        grossTotal += ((parseInt(r.fare) || 0) + (parseInt(r.hiway) || 0));
                     });
                 }
             });
             return `
                 <div class="card bg-slate-800 text-white shadow-md">
-                    <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">今月の累計 (${(start.getMonth()+1)}/${start.getDate()} 〜)</div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">給与期間累計 (${(start.getMonth()+1)}/${start.getDate()} 〜)</div>
                     <div class="flex justify-between items-end">
-                        <div><span class="text-[9px] text-emerald-400 font-bold block">税抜営収累計</span><span class="text-2xl font-black text-yellow-400">¥${Math.floor(net/1.1).toLocaleString()}</span></div>
-                        <div class="text-right"><span class="text-[9px] text-slate-400 block uppercase">税込合計</span><span class="text-sm font-bold">¥${gross.toLocaleString()}</span></div>
+                        <div><span class="text-[9px] text-emerald-400 font-bold block">税抜営収累計</span><span class="text-2xl font-black text-yellow-400">¥${getNet(netTotal).toLocaleString()}</span></div>
+                        <div class="text-right">
+                            <span class="text-[9px] text-slate-400 block uppercase">税込合計</span>
+                            <span class="text-sm font-bold">¥${grossTotal.toLocaleString()}</span>
+                        </div>
                     </div>
                 </div>`;
         }
@@ -319,19 +329,28 @@
             if(query !== '') clearBtn.classList.remove('hidden'); else clearBtn.classList.add('hidden');
             if (totalEl) totalEl.innerHTML = calculatePeriodTotal();
 
-            if (query === '') {
-                state.shifts.forEach((s, idx) => {
-                    const tn = Math.floor(s.rides.reduce((v, r) => v + (parseInt(r.fare) || 0), 0) / 1.1);
-                    el.innerHTML += `<div class="card p-0 overflow-hidden shadow-sm"><div class="p-4 bg-white flex justify-between font-bold" onclick="toggleHist(${idx})"><span>${s.date} ${s.rides.length}件</span><span class="text-blue-600">¥${tn.toLocaleString()}</span></div><div id="hist-det-${idx}" class="hist-detail p-4 border-t bg-gray-50">${s.rides.map(r=>`<div class="py-2 border-b last:border-0 border-gray-200"><div class="flex justify-between font-bold text-[11px] mb-0.5"><span>${r.time} [${r.type}] ${r.endPlace}</span><span>¥${(parseInt(r.fare)+parseInt(r.hiway)).toLocaleString()}</span></div></div>`).join('')}</div></div>`;
-                });
-            } else {
-                state.shifts.forEach(s => {
-                    const matchingRides = s.rides.filter(r => (r.tags && r.tags.some(t => t.toLowerCase().includes(query))) || (r.endPlace && r.endPlace.toLowerCase().includes(query)) || (r.memo && r.memo.toLowerCase().includes(query)) || (r.type && r.type.includes(query)) || (s.date.includes(query)));
-                    matchingRides.forEach(r => {
-                        el.innerHTML += `<div class="bg-white p-4 rounded-2xl border mb-2 shadow-sm"><div class="flex justify-between items-start mb-1"><span class="text-[10px] font-bold text-gray-400 uppercase">${s.date} ${r.time}</span><span class="bg-blue-50 text-blue-600 text-[9px] px-2 py-0.5 rounded-full font-bold">${r.type}</span></div><div class="flex justify-between items-center"><div class="text-sm font-bold text-gray-700 truncate mr-2">${r.endPlace || '地点不明'}</div><div class="text-lg font-black text-blue-700">¥${(parseInt(r.fare) + parseInt(r.hiway)).toLocaleString()}</div></div></div>`;
-                    });
-                });
-            }
+            state.shifts.forEach((s, idx) => {
+                if (query !== '' && !s.date.includes(query) && !s.rides.some(r => r.endPlace.toLowerCase().includes(query) || r.type.toLowerCase().includes(query))) return;
+
+                const dailyTotalFare = s.rides.reduce((v, r) => v + (parseInt(r.fare) || 0), 0);
+                const dailyTotalHiway = s.rides.reduce((v, r) => v + (parseInt(r.hiway) || 0), 0);
+                const dailyNet = getNet(dailyTotalFare);
+                const dailyGross = dailyTotalFare + dailyTotalHiway;
+
+                el.innerHTML += `
+                    <div class="card p-0 overflow-hidden shadow-sm">
+                        <div class="p-4 bg-white flex justify-between items-center font-bold" onclick="toggleHist(${idx})">
+                            <span>${s.date} ${s.rides.length}件</span>
+                            <div class="text-right">
+                                <span class="text-blue-600 block text-lg leading-tight">¥${dailyNet.toLocaleString()}</span>
+                                <span class="text-gray-400 text-[10px] font-normal">税込 ¥${dailyGross.toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div id="hist-det-${idx}" class="hist-detail p-4 border-t bg-gray-50">
+                            ${s.rides.map(r=>`<div class="py-2 border-b last:border-0 border-gray-200"><div class="flex justify-between font-bold text-[11px] mb-0.5"><span>${r.time} [${r.type}] ${r.endPlace}</span><span>¥${(parseInt(r.fare)+parseInt(r.hiway)).toLocaleString()}</span></div></div>`).join('')}
+                        </div>
+                    </div>`;
+            });
         }
         function toggleHist(idx) { document.getElementById(`hist-det-${idx}`).classList.toggle('open'); }
 
@@ -340,13 +359,21 @@
             if(!state.currentShift) { document.getElementById('share-date-mode').innerText = "未出庫"; sn.innerText = "0"; document.getElementById('share-count').innerText = "0"; document.getElementById('share-km').innerText = "0.0"; document.getElementById('share-top3').innerHTML = '<p class="text-center text-gray-500 text-[10px] py-4 uppercase">No Data</p>'; return; }
             const a = state.currentShift, tf = a.rides.reduce((v, r) => v + (parseInt(r.fare) || 0), 0);
             document.getElementById('share-date-mode').innerText = `${a.date} / ${state.settings.mode}`;
-            sn.innerText = Math.floor(tf / 1.1).toLocaleString();
+            sn.innerText = getNet(tf).toLocaleString();
             document.getElementById('share-count').innerText = a.rides.length;
             document.getElementById('share-km').innerText = a.rides.reduce((v, r) => v + (parseFloat(r.dist) || 0), 0).toFixed(1);
             document.getElementById('share-dist-box').style.display = state.settings.showDist ? 'block' : 'none';
+            
             const top3 = [...a.rides].sort((x, y) => (parseInt(y.fare) || 0) - (parseInt(x.fare) || 0)).slice(0, 3);
             const icons = ['🥇','🥈','🥉'];
-            document.getElementById('share-top3').innerHTML = top3.map((r, i) => `<div class="flex justify-between items-center py-3 border-b border-white/5"><span class="text-4xl">${icons[i]}</span><span class="text-3xl font-black">¥${Math.floor(parseInt(r.fare)/1.1).toLocaleString()}</span></div>`).join('') || '<p class="text-center text-[10px] py-4 uppercase">No Data</p>';
+            document.getElementById('share-top3').innerHTML = top3.map((r, i) => `
+                <div class="flex justify-between items-center py-4 border-b border-white/10 last:border-0">
+                    <div class="flex items-center gap-3">
+                        <span class="text-4xl">${icons[i]}</span>
+                        <div class="text-left"><p class="text-[8px] text-gray-500 uppercase font-bold">${r.time} [${r.type}]</p><p class="text-[11px] text-white font-bold truncate w-32">${r.endPlace || '地点不明'}</p></div>
+                    </div>
+                    <span class="text-3xl font-black text-white">¥${getNet(parseInt(r.fare)).toLocaleString()}</span>
+                </div>`).join('') || '<p class="text-center text-[10px] py-4 uppercase">No Data Recorded</p>';
         }
 
         function openSettings() { 
@@ -358,8 +385,8 @@
                         <div><label class="block text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">給与締め日</label><input type="number" id="s-closing" value="${state.settings.closingDay}" class="w-full p-3 bg-gray-50 border-none rounded-2xl font-bold text-center"></div>
                         <div class="flex justify-between items-center py-2"><span class="text-sm font-bold text-gray-700">メモ欄を表示</span><label class="flex items-center"><input type="checkbox" id="s-memo" class="hidden" ${state.settings.showMemo ? 'checked' : ''}><div class="toggle-switch"></div></label></div>
                         <div class="flex justify-between items-center py-2"><span class="text-sm font-bold text-gray-700">営業距離を表示</span><label class="flex items-center"><input type="checkbox" id="s-dist" class="hidden" ${state.settings.showDist ? 'checked' : ''}><div class="toggle-switch"></div></label></div>
-                        <button onclick="exportCSV()" class="w-full bg-emerald-500 text-white py-3 rounded-2xl font-bold mb-2">CSV保存</button>
-                        <button onclick="saveSet()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold">設定を保存</button>
+                        <button onclick="saveSet()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">設定を保存</button>
+                        <button onclick="exportCSV()" class="w-full bg-emerald-500 text-white py-3 rounded-2xl font-bold mb-2 shadow-sm">CSVで出力</button>
                         <button onclick="clearSys()" class="w-full text-red-400 text-[10px] mt-4 font-bold block underline text-center">すべてのデータをリセット</button>
                         <button onclick="closeModal()" class="w-full text-gray-400 text-xs mt-2 text-center underline">閉じる</button>
                     </div>
@@ -375,7 +402,7 @@
         
         function exportCSV() { 
             let c = "日付,時刻,区分,税込,高速,税抜,距離,実車,降車,メモ\n"; 
-            state.shifts.forEach(s => { s.rides.forEach(r => { c += `${s.date},${r.time},${r.type},${(parseInt(r.fare)+parseInt(r.hiway))},${r.hiway},${Math.floor(r.fare/1.1)},${r.dist},${r.startPlace},${r.endPlace},${r.memo}\n`; }); }); 
+            state.shifts.forEach(s => { s.rides.forEach(r => { c += `${s.date},${r.time},${r.type},${(parseInt(r.fare)+parseInt(r.hiway))},${r.hiway},${getNet(parseInt(r.fare))},${r.dist},${r.startPlace},${r.endPlace},${r.memo}\n`; }); }); 
             const b = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), c], { type: 'text/csv' }); 
             const l = document.createElement("a"); l.href = URL.createObjectURL(b); 
             const now = new Date(); const dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
