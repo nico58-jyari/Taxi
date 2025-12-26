@@ -1,28 +1,75 @@
 // sw.js
-const CACHE_NAME = 'taxi-nippo-pro-v8-5-0'; // ←更新するたびに数字を変える（超重要）
+const SW_VERSION = '9.4';
+const CACHE_NAME = `taxi-pro-${SW_VERSION}`;
+
 const CORE_ASSETS = [
+
   './',
   './index.html',
-  './icon.png',
+  './style.css?v=9.4',
+  './icon01.png',
   './OGP.png',
+  './app.js?v=9.4',
+
 ];
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  if (url.origin !== location.origin) return;
+
+  // HTML
+  if (req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(req);
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        return caches.match(req) || caches.match('./index.html');
+      }
+    })());
+    return;
+  }
+
+  // JS / CSS
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(req);
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        return caches.match(req);
+      }
+    })());
+    return;
+  }
+
+  // その他（画像など）
+  event.respondWith(caches.match(req).then(res => res || fetch(req)));
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
   );
-  // すぐ有効化したい場合は、ユーザーが押した時だけにする（下のmessageで対応）
+  // skipWaitingは「更新」ボタン押下で実行する設計のままでOK
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.map(k => (k !== CACHE_NAME ? caches.delete(k) : null)));
+    await Promise.all(
+      keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : Promise.resolve()))
+    );
     await self.clients.claim();
   })());
 });
 
-// 更新ボタン押下で待機中SWを即時有効化
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -33,7 +80,6 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
 
-  // GET以外は触らない
   if (req.method !== 'GET') return;
 
   event.respondWith((async () => {
@@ -42,13 +88,15 @@ self.addEventListener('fetch', (event) => {
     if (cached) return cached;
 
     const res = await fetch(req);
-    // 同一オリジンだけキャッシュ（CDNはキャッシュしない方が事故りにくい）
+
+    // 同一オリジンだけキャッシュ
     try {
       const url = new URL(req.url);
       if (url.origin === self.location.origin) {
         cache.put(req, res.clone());
       }
     } catch {}
+
     return res;
   })());
 });
