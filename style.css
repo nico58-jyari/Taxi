@@ -1,7 +1,7 @@
     body { font-family: sans-serif; background-color: #f8fafc; overflow-x: hidden; }
     .btn-main { width: 100%; padding: 18px; font-size: 1.25rem; font-weight: bold; border-radius: 16px; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
     .btn-main:active { transform: translateY(2px); box-shadow: none; }
-    .update-btn { min-height: 44px;   /* iOS推奨タップサイズ */   padding: 8px 14px;   line-height: 1.2;  white-space: nowrap; }
+    .update-btn { min-height: 44px;   /* iOS???????? */   padding: 8px 14px;   line-height: 1.2;  white-space: nowrap; }
 
     .card { background: white; padding: 1.25rem; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
     .status-container { display: flex; background: #1e293b; color: white; border-radius: 16px; overflow: hidden; margin-top: 1rem; margin-bottom: 0.5rem; }
@@ -37,4 +37,11 @@
     input[type="number"],
     input[type="text"] {  border: 1px solid #d1d5db;   border-radius: 8px;   background-color: #f9fafb; }
 
-    input:focus {   outline: none;   border-color: #3b82f6; /* 青 */   box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+    input:focus {   outline: none;   border-color: #3b82f6; /* ? */   box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+
+ /* ????????????????? */
+ .breath-red {  color: #ef4444 !important;  animation: breathRed 1.8s ease-in-out infinite;}
+
+    .breath-red {  color: #ef4444; /* Tailwind ? red-500 ?? */
+  animation: breathRed 1.8s ease-in-out infinite;}
+     @keyframes breathRed {  0% {    opacity: 0.35;  }  50% {    opacity: 1;  }  100% {    opacity: 0.35;  }  }
